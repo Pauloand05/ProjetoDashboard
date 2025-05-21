@@ -13,6 +13,9 @@ paises = {
     "MX": "México",
     "VE": "Venezuela",
     "USA": "Estados Unidos",
+    "ZAF": "África do Sul",
+    "EGY": "EGITO",
+    "ZMB": "Zâmbia",
 }
 indicador = "SP.POP.TOTL"  # População total
 
@@ -50,6 +53,9 @@ iso3_codes = {
     "México": "MEX",
     "Venezuela": "VEN",
     "Estados Unidos": "USA",
+    "África do Sul": "ZAF",
+    "EGITO": "EGY",
+    "Zâmbia": "ZMB",
 }
 
 # Criar nova coluna com os códigos ISO-3
@@ -68,9 +74,11 @@ df["Crescimento Anual (%)"] = df.groupby("País")["População"].pct_change() * 
 df["Crescimento Anual (%)"] = df.groupby("País")["População"].pct_change() * 100
 df["Crescimento Anual (%)"] = df["Crescimento Anual (%)"].round(2)  # opcional, para arredondar
 df = df.dropna(subset=["Crescimento Anual (%)"])  # remove linhas com NaN nessa coluna
+df["Variação"] = df["Crescimento Anual (%)"].apply(lambda x: "Crescimento" if x > 0 else "Queda")
+
 
 df["País"] = df["País"].astype(str)
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown("<p style='text-align: center;'>País</p>", unsafe_allow_html=True)
@@ -84,6 +92,10 @@ with col2:
 with col3:
     st.markdown("<p style='text-align: center;'>Crescimento Anual (%)</p>", unsafe_allow_html=True)
     crescimento_anual = st.selectbox("", ["Todos"] + list(valores_crescimento))
+
+with col4:
+    st.markdown("<p style='text-align: center;'>Variação</p>", unsafe_allow_html=True)
+    variacao_selecionada = st.selectbox("", ["Todos"] + list(df["Variação"].unique()))
 
 
 # Filtragem de dados
@@ -100,6 +112,11 @@ else:
 # Novo filtro: Crescimento Anual (%)
 if crescimento_anual != "Todos":
     df_filtred = df_filtred[df_filtred["Crescimento Anual (%)"] == crescimento_anual]
+
+# Novo filtro: Variação
+if variacao_selecionada != "Todos":
+    df_filtred = df_filtred[df_filtred["Variação"] == variacao_selecionada]
+
 
 # Mostrar título
 st.markdown(
@@ -139,7 +156,7 @@ if not df_filtred.empty:
     col3, col4 = st.columns(2)
     col5, col6 = st.columns(2)
 
-    fig1 = px.bar(df_filtred, x="Ano", y="População", color="Ano", title=f"População Total {pais_selecionado} (2013-2023)", barmode="group")
+    fig1 = px.bar(df_filtred, x="Ano", y="População", color="Variação", title=f"Crescimento/Queda Populacional {pais_selecionado} (2013-2023)", barmode="group", color_discrete_map={"Crescimento": "green", "Queda": "red"})
     col1.plotly_chart(fig1)
 
     fig2 = px.bar(df_filtred, x="População", y="Ano", color="Ano", title=f"População Total {pais_selecionado} (2013-2023)", orientation='h')
