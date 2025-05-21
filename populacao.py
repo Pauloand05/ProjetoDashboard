@@ -178,17 +178,26 @@ st.markdown("""
             padding: 8px 12px;
             text-align: center;
             border: 1px solid #ddd;
-            background-color: #003366;
         }
         .wide-table th {
-            align: center;
             background-color: #FFA500;
+        }
+        .wide-table td {
+            background-color: #003366;
+        }
+        .table-container {
+            overflow-x: auto;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# Exibe a tabela com a classe definida
-st.markdown(html, unsafe_allow_html=True)
+# Exibe a tabela com responsividade
+st.markdown(f"""
+    <div class="table-container">
+        {html}
+    </div>
+""", unsafe_allow_html=True)
+
 
 # Exibir gráficos apenas se houver dados
 if not df_filtred.empty:
