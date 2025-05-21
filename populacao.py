@@ -43,6 +43,46 @@ st.set_page_config(layout="wide")
 # Criar DataFrame
 df = pd.DataFrame(dados)
 
+# --- NOVO TRECHO: DADOS DE PIB e PIB per capita --- #
+
+# Indicador de PIB
+indicador_pib = "NY.GDP.MKTP.CD"  # PIB total em dólares correntes
+dados_pib = []
+
+# Baixando os dados de PIB do Banco Mundial
+for codigo, nome in paises.items():
+    url_pib = f"https://api.worldbank.org/v2/country/{codigo}/indicator/{indicador_pib}?format=json&date=2013:2025"
+    resposta_pib = requests.get(url_pib)
+    json_pib = resposta_pib.json()
+
+    if len(json_pib) > 1:
+        for item in json_pib[1]:
+            ano = item['date']
+            valor = item['value']
+            if valor is not None:
+                dados_pib.append({
+                    "País": nome,
+                    "Ano": int(ano),
+                    "PIB": float(valor)
+                })
+
+# Criar DataFrame de PIB
+df_pib = pd.DataFrame(dados_pib)
+
+# Mesclar população com PIB
+df = pd.merge(df, df_pib, on=["País", "Ano"], how="inner")
+
+# Calcular PIB per capita
+df["PIB per capita"] = df["PIB"] / df["População"]
+
+# Calcular crescimento PIB e população
+df = df.sort_values(by=["País", "Ano"])
+df["Crescimento PIB (%)"] = df.groupby("País")["PIB"].pct_change() * 100
+df["Crescimento PIB (%)"] = df["Crescimento PIB (%)"].round(2)
+
+# OBS: "Crescimento População (%)" já está calculado como "Crescimento Anual (%)"
+
+
 # Mapeamento de país para código ISO-3
 iso3_codes = {
     "Brasil": "BRA",
@@ -162,7 +202,22 @@ if not df_filtred.empty:
     fig2 = px.bar(df_filtred, x="População", y="Ano", color="Ano", title=f"População Total {pais_selecionado} (2013-2023)", orientation='h')
     col2.plotly_chart(fig2)
 
-    fig3 = px.line(df_filtred, x="Ano", y="População", color="País", title=f"População por Ano {pais_selecionado} (2013-2023)")
+     # NOVO fig3: Linha com Crescimento Populacional (%) e PIB (%)
+    df_linha = df_filtred[["Ano", "País", "Crescimento Anual (%)", "Crescimento PIB (%)"]].dropna()
+
+    fig3 = px.line(
+        df_linha.melt(id_vars=["Ano", "País"], 
+                      value_vars=["Crescimento Anual (%)", "Crescimento PIB (%)"],
+                      var_name="Indicador", value_name="Valor"),
+        x="Ano",
+        y="Valor",
+        color="Indicador",
+        line_dash="Indicador",
+        markers=True,
+        title=f"Crescimento Populacional vs Econômico - {pais_selecionado if pais_selecionado != 'Todos' else 'Todos os Países'}"
+    )
+    fig3.update_layout(yaxis_title="Crescimento (%)")
+
     col3.plotly_chart(fig3)
 
     fig4 = px.pie(df_filtred, values="População", names="Ano", title=f"População por Ano - {pais_selecionado}")
