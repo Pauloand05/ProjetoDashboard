@@ -40,6 +40,21 @@ st.set_page_config(layout="wide")
 # Criar DataFrame
 df = pd.DataFrame(dados)
 
+# Mapeamento de país para código ISO-3
+iso3_codes = {
+    "Brasil": "BRA",
+    "Argentina": "ARG",
+    "Chile": "CHL",
+    "Colômbia": "COL",
+    "Peru": "PER",
+    "México": "MEX",
+    "Venezuela": "VEN",
+    "Estados Unidos": "USA",
+}
+
+# Criar nova coluna com os códigos ISO-3
+df["ISO3"] = df["País"].map(iso3_codes)
+
 
 # # Mostrar título e tabela no app
 # st.title("Tabela de População Total (2013-2025)")
@@ -143,6 +158,32 @@ if not df_filtred.empty:
     st.subheader("Relação entre População Total e Crescimento Percentual")
     fig7 = px.scatter(df_filtred,x="População",y="Crescimento Anual (%)",color="País",size="População",hover_name="Ano",title="Correlação: População x Crescimento (%)")
     st.plotly_chart(fig7)
+
+    # Mapa
+    st.subheader("Mapa de População Total por País")
+
+    if ano != "Todos":
+        df_mapa = df[df["Ano"] == ano]
+
+        fig_mapa = px.choropleth(
+            df_mapa,
+            locations="ISO3",  # agora com códigos ISO válidos
+            color="População",
+            hover_name="País",
+            title=f"População Total por País em {ano}",
+            color_continuous_scale=px.colors.sequential.Plasma,
+            projection="natural earth"
+        )
+
+        fig_mapa.update_geos(showcountries=True, showcoastlines=True, showland=True, fitbounds="locations")
+        fig_mapa.update_layout(
+            autosize=True,
+            margin=dict(l=0, r=0, t=30, b=0)
+        )
+
+        st.plotly_chart(fig_mapa, use_container_width=True)
+    else:
+        st.info("Selecione um ano específico para visualizar o mapa.")
 else:
     st.warning("Nenhum dado encontrado para os filtros selecionados.")
 
