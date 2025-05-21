@@ -1,0 +1,149 @@
+import requests
+import pandas as pd
+import streamlit as st
+import plotly.express as px
+
+# Países e indicador
+paises = {
+    "BR": "Brasil",
+    "AR": "Argentina",
+    "CL": "Chile",
+    "CO": "Colômbia",
+    "PE": "Peru",
+    "MX": "México",
+    "VE": "Venezuela",
+    "USA": "Estados Unidos",
+}
+indicador = "SP.POP.TOTL"  # População total
+
+dados = []
+
+# Baixando os dados do Banco Mundial
+for codigo, nome in paises.items():
+    url = f"https://api.worldbank.org/v2/country/{codigo}/indicator/{indicador}?format=json&date=2013:2025"
+    resposta = requests.get(url)
+    json_data = resposta.json()
+
+    if len(json_data) > 1:
+        for item in json_data[1]:
+            ano = item['date']
+            valor = item['value']
+            if valor is not None:
+                dados.append({
+                    "País": nome,
+                    "Ano": int(ano),
+                    "População": int(valor)
+                })
+
+st.set_page_config(layout="wide")
+
+# Criar DataFrame
+df = pd.DataFrame(dados)
+
+
+# # Mostrar título e tabela no app
+# st.title("Tabela de População Total (2013-2025)")
+# st.dataframe(df)
+
+# Ordenar por país e ano antes de calcular a variação
+df = df.sort_values(by=["País", "Ano"])
+
+# Calcular crescimento percentual ano a ano por país
+df["Crescimento Anual (%)"] = df.groupby("País")["População"].pct_change() * 100
+df["Crescimento Anual (%)"] = df.groupby("País")["População"].pct_change() * 100
+df["Crescimento Anual (%)"] = df["Crescimento Anual (%)"].round(2)  # opcional, para arredondar
+df = df.dropna(subset=["Crescimento Anual (%)"])  # remove linhas com NaN nessa coluna
+
+df["País"] = df["País"].astype(str)
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("<p style='text-align: center;'>País</p>", unsafe_allow_html=True)
+    pais_selecionado = st.selectbox("", ["Todos"] + list(df["País"].unique()))
+
+with col2:
+    st.markdown("<p style='text-align: center;'>Ano</p>", unsafe_allow_html=True)
+    ano = st.selectbox("", ["Todos"] + list(df["Ano"].unique()))
+    valores_crescimento = sorted(df["Crescimento Anual (%)"].unique(), reverse=True)
+
+with col3:
+    st.markdown("<p style='text-align: center;'>Crescimento Anual (%)</p>", unsafe_allow_html=True)
+    crescimento_anual = st.selectbox("", ["Todos"] + list(valores_crescimento))
+
+
+# Filtragem de dados
+if pais_selecionado == "Todos" and ano == "Todos":
+    df_filtred = df.copy()
+elif pais_selecionado != "Todos" and ano == "Todos":
+    df_filtred = df[df["País"] == pais_selecionado]
+elif pais_selecionado == "Todos" and ano != "Todos":
+    df_filtred = df[df["Ano"] == ano]
+else:
+    df_filtred = df[(df["País"] == pais_selecionado) & (df["Ano"] == ano)]
+
+
+# Novo filtro: Crescimento Anual (%)
+if crescimento_anual != "Todos":
+    df_filtred = df_filtred[df_filtred["Crescimento Anual (%)"] == crescimento_anual]
+
+# Mostrar título
+st.markdown(
+    "<h1 style='text-align: center;'>Tabela de População Total (2013-2023)</h1>",
+    unsafe_allow_html=True
+)
+
+# Supondo que df_filtred seja seu DataFrame filtrado
+html = df_filtred.to_html(index=False, classes='wide-table')
+
+# Estilo CSS para largura total
+st.markdown("""
+    <style>
+        .wide-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .wide-table th, .wide-table td {
+            padding: 8px 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+            background-color: #003366;
+        }
+        .wide-table th {
+            align: center;
+            background-color: #FFA500;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# Exibe a tabela com a classe definida
+st.markdown(html, unsafe_allow_html=True)
+
+# Exibir gráficos apenas se houver dados
+if not df_filtred.empty:
+    col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
+    col5, col6 = st.columns(2)
+
+    fig1 = px.bar(df_filtred, x="Ano", y="População", color="Ano", title=f"População Total {pais_selecionado} (2013-2023)", barmode="group")
+    col1.plotly_chart(fig1)
+
+    fig2 = px.bar(df_filtred, x="População", y="Ano", color="Ano", title=f"População Total {pais_selecionado} (2013-2023)", orientation='h')
+    col2.plotly_chart(fig2)
+
+    fig3 = px.line(df_filtred, x="Ano", y="População", color="País", title=f"População por Ano {pais_selecionado} (2013-2023)")
+    col3.plotly_chart(fig3)
+
+    fig4 = px.pie(df_filtred, values="População", names="Ano", title=f"População por Ano - {pais_selecionado}")
+    col4.plotly_chart(fig4)
+
+    fig6 = px.line(df_filtred, x="Ano", y="Crescimento Anual (%)", color="País", title="Evolução da Taxa de Crescimento (%)")
+    col6.plotly_chart(fig6)
+
+    # NOVO GRÁFICO 2: Scatter População vs Crescimento
+    st.subheader("Relação entre População Total e Crescimento Percentual")
+    fig7 = px.scatter(df_filtred,x="População",y="Crescimento Anual (%)",color="País",size="População",hover_name="Ano",title="Correlação: População x Crescimento (%)")
+    st.plotly_chart(fig7)
+else:
+    st.warning("Nenhum dado encontrado para os filtros selecionados.")
+
+
