@@ -126,7 +126,7 @@ paises_com_queda = df[df["Variação"] == "Queda"]["País"].unique().tolist()
 
 
 df["País"] = df["País"].astype(str)
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("<p style='text-align: center;'>País(es)</p>", unsafe_allow_html=True)
@@ -138,10 +138,6 @@ with col2:
     valores_crescimento = sorted(df["Crescimento Anual (%)"].unique(), reverse=True)
 
 with col3:
-    st.markdown("<p style='text-align: center;'>Crescimento Anual (%)</p>", unsafe_allow_html=True)
-    crescimento_anual = st.selectbox("", ["Todos"] + list(valores_crescimento))
-
-with col4:
     st.markdown("<p style='text-align: center;'>Variação</p>", unsafe_allow_html=True)
     variacao_selecionada = st.selectbox("", ["Todos"] + list(df["Variação"].unique()))
 
