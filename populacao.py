@@ -14,7 +14,7 @@ paises = {
     "VE": "Venezuela",
     "USA": "Estados Unidos",
     "ZAF": "África do Sul",
-    "EGY": "EGITO",
+    "EGY": "Egito",
     "ZMB": "Zâmbia",
 }
 indicador = "SP.POP.TOTL"  # População total
@@ -123,20 +123,34 @@ paises_com_queda = df[df["Variação"] == "Queda"]["País"].unique().tolist()
 
 
 df["País"] = df["País"].astype(str)
+
 col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.markdown("<p style='text-align: center;'>País(es)</p>", unsafe_allow_html=True)
-    paises_selecionados = st.multiselect("Selecione um ou mais países", options=sorted(df["País"].unique()), default=sorted(df["País"].unique()))
+# Barra lateral com filtros
+st.sidebar.title("🎯 Filtros")
 
-with col2:
-    st.markdown("<p style='text-align: center;'>Ano</p>", unsafe_allow_html=True)
-    ano = st.selectbox("", ["Todos"] + list(df["Ano"].unique()))
-    valores_crescimento = sorted(df["Crescimento Anual (%)"].unique(), reverse=True)
+paises_selecionados = st.sidebar.multiselect(
+    "País(es)",
+    options=sorted(df["País"].unique()),
+    default=sorted(df["País"].unique())
+)
 
-with col3:
-    st.markdown("<p style='text-align: center;'>Variação</p>", unsafe_allow_html=True)
-    variacao_selecionada = st.selectbox("", ["Todos"] + list(df["Variação"].unique()))
+ano = st.sidebar.selectbox("Ano", ["Todos"] + list(df["Ano"].unique()))
+
+variacao_selecionada = st.sidebar.selectbox("Variação", ["Todos"] + list(df["Variação"].unique()))
+
+# Filtro de crescimento anual
+st.sidebar.markdown("### Crescimento Anual (%)")
+valor_min, valor_max = st.sidebar.slider(
+    "Filtrar por faixa de crescimento (%)",
+    float(df["Crescimento Anual (%)"].min()),
+    float(df["Crescimento Anual (%)"].max()),
+    (
+        float(df["Crescimento Anual (%)"].min()),
+        float(df["Crescimento Anual (%)"].max())
+    )
+)
+
 
 
 # Filtragem de dados
@@ -149,10 +163,6 @@ if ano != "Todos":
     df_filtred = df_filtred[df_filtred["Ano"] == ano]
 
 
-# Novo filtro: Crescimento Anual (%)
-min_val, max_val = df["Crescimento Anual (%)"].min(), df["Crescimento Anual (%)"].max()
-valor_min, valor_max = st.slider("Filtrar Crescimento Anual (%)", float(min_val), float(max_val), (float(min_val), float(max_val)))
-df_filtred = df_filtred[(df_filtred["Crescimento Anual (%)"] >= valor_min) & (df_filtred["Crescimento Anual (%)"] <= valor_max)]
 
 
 # Novo filtro: Variação
@@ -166,153 +176,166 @@ if sorted(paises_selecionados) == todos_paises:
     paises_exibicao = "Todos"
 else:
     paises_exibicao = ", ".join(paises_selecionados)
-st.markdown(f"<h1 style='text-align: center;'>Tabela de População Total ({paises_exibicao})</h1>", unsafe_allow_html=True)
 
 
+st.markdown(f"<h1 style='text-align: center; color: #F9A825;'>População e Economia - {paises_exibicao}</h1>", unsafe_allow_html=True)
 
+# Criar abas para organizar a visualização
+aba_tabela, aba_graficos, aba_mapa = st.tabs(["📋 Tabela de Dados", "📊 Gráficos", "🗺️ Mapa"])
 
-# Cópia apenas para exibição
-df_exibicao = df_filtred.copy()
+# --- ABA TABELA ---
+with aba_tabela:
 
-# Formatar colunas no df_exibicao (e não no df original)
-df_exibicao["População"] = df_exibicao["População"].apply(lambda x: f"{x:,}")
-df_exibicao["PIB"] = df_exibicao["PIB"].apply(lambda x: f"${x:,.0f}")
-df_exibicao["PIB per capita"] = df_exibicao["PIB per capita"].apply(lambda x: f"${x:,.0f}")
-
-
-
-
-# Converter para HTML
-html = df_exibicao.to_html(index=False, classes='wide-table')
-
-
-# Estilo CSS para largura total
-st.markdown("""
-    <style>
-        .wide-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .wide-table th, .wide-table td {
-            padding: 8px 12px;
-            text-align: center;
-            border: 1px solid #ddd;
-        }
-        .wide-table th {
-            background-color: #FFA500;
-        }
-        .wide-table td {
-            background-color: #003366;
-        }
+    st.markdown("""
+        <style>
         .table-container {
+            width: 100%;
             overflow-x: auto;
         }
-    </style>
-""", unsafe_allow_html=True)
 
-# Exibe a tabela com responsividade
-st.markdown(f"""
-    <div class="table-container">
-        {html}
-    </div>
-""", unsafe_allow_html=True)
+        .wide-table {
+            width: 100% !important;
+            border-collapse: collapse;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #f9f9f9; /* texto claro para tema escuro */
+        }
 
-csv = df_filtred.to_csv(index=False).encode('utf-8')
-st.download_button("Baixar CSV", csv, "dados_filtrados.csv", "text/csv", key='download-csv')
+        .wide-table th, .wide-table td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: center;
+        }
 
-# Exibir gráficos apenas se houver dados
-if not df_filtred.empty:
-    col1, col2 = st.columns(2)
-    col3, col4 = st.columns(2)
-    col5, col6 = st.columns(2)
-    fig_pib_pc = st.columns(2)
+        .wide-table th {
+            background-color: #f9a825;  /* amarelo vibrante */
+            color: #000000;  /* texto escuro no cabeçalho para contraste */
+            font-weight: bold;
+        }
 
-    fig1 = px.bar(
-        df_filtred,
-        x="Ano",
-        y="População",
-        color="País", 
-        title=f"Crescimento Populacional por País - {paises_exibicao} {ano_min}-{ano_max}", 
-        barmode="group", 
-        color_discrete_map={"Crescimento": "green", "Queda": "red"}
-    )
-    col1.plotly_chart(fig1)
+        /* Linhas ímpares com fundo preto */
+        .wide-table tr:nth-child(odd) {
+            background-color: #000000;
+        }
 
-    fig2 = px.bar(df_filtred, 
-                x="População", 
-                y="Ano", color="País", 
-                title=f"População Total {paises_exibicao} {ano_min}-{ano_max}", 
-                orientation='h')
-    col2.plotly_chart(fig2)
+        /* Linhas pares com fundo cinza escuro */
+        .wide-table tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
 
-     # NOVO fig3: Linha com Crescimento Populacional (%) e PIB (%)
-    df_linha = df_filtred[["Ano", "País", "Crescimento Anual (%)", "Crescimento PIB (%)"]].dropna()
+        /* Hover com cinza médio */
+        .wide-table tr:hover {
+            background-color: #444444;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    df_linha_melted = df_linha.melt(
-    id_vars=["Ano", "País"], 
-    value_vars=["Crescimento Anual (%)", "Crescimento PIB (%)"],
-    var_name="Indicador", 
-    value_name="Valor"
-)
+    # Preparar a tabela formatada para exibição
+    df_exibicao = df_filtred.copy()
+    df_exibicao["População"] = df_exibicao["População"].apply(lambda x: f"{x:,}")
+    df_exibicao["PIB"] = df_exibicao["PIB"].apply(lambda x: f"${x:,.0f}")
+    df_exibicao["PIB per capita"] = df_exibicao["PIB per capita"].apply(lambda x: f"${x:,.0f}")
 
-    fig3 = px.line(
-        df_linha_melted,
-        x="Ano",
-        y="Valor",
-        color="País",               # Agora as cores representam os países
-        line_dash="Indicador",      # E os tipos de linha diferenciam os indicadores
-        markers=True,
-        title=f"Crescimento Populacional vs Econômico - {paises_exibicao if paises_exibicao != 'Todos' else 'Todos os Países'}"
-    )
-    fig3.update_layout(yaxis_title="Crescimento (%)")
-    col3.plotly_chart(fig3)
+    html = df_exibicao.to_html(index=False, classes='wide-table')
 
-    fig4 = px.pie(df_filtred, 
-                values="População", 
-                names="País", 
-                title=f"População por Ano - {paises_exibicao} {ano_min}-{ano_max}", 
-                color_discrete_sequence=px.colors.sequential.Plasma)
-    col4.plotly_chart(fig4)
+    st.markdown(f"""
+        <div class="table-container">
+            {html}
+        </div>
+    """, unsafe_allow_html=True)
 
-    fig_pib_pc = px.line(df_filtred, x="Ano", y="PIB per capita", color="País", title="Evolução do PIB per capita")
-    st.plotly_chart(fig_pib_pc)
+    csv = df_filtred.to_csv(index=False).encode('utf-8')
+    st.download_button("Baixar CSV", csv, "dados_filtrados.csv", "text/csv", key='download-csv')
 
+    # --- ABA GRÁFICOS ---
+    with aba_graficos:
+        if not df_filtred.empty:
+            col1, col2 = st.columns(2)
+            col3, col4 = st.columns(2)
+            col5, col6 = st.columns(2)
 
-    fig6 = px.line(df_filtred, x="Ano", y="Crescimento Anual (%)", color="País", title="Evolução da Taxa de Crescimento (%)")
-    col6.plotly_chart(fig6)
+            fig1 = px.bar(
+                df_filtred,
+                x="Ano",
+                y="População",
+                color="País", 
+                title=f"População Total - {paises_exibicao} {ano_min}-{ano_max}", 
+                barmode="group", 
+                color_discrete_map={"Crescimento": "green", "Queda": "red"}
+            )
+            col1.plotly_chart(fig1)
 
-    # NOVO GRÁFICO 2: Scatter População vs Crescimento
-    st.subheader("Relação entre População Total e Crescimento Percentual")
-    fig7 = px.scatter(df_filtred,x="População",y="Crescimento Anual (%)",color="País",size="População",hover_name="Ano",title="Correlação: População x Crescimento (%)")
-    st.plotly_chart(fig7)
+            fig2 = px.bar(df_filtred, 
+                        x="População", 
+                        y="Ano", color="País", 
+                        title=f"População Total - {paises_exibicao} {ano_min}-{ano_max}", 
+                        orientation='h')
+            col2.plotly_chart(fig2)
 
-    # Mapa
-    st.subheader("Mapa de População Total por País")
+            # Crescimento Populacional vs Econômico
+            df_linha = df_filtred[["Ano", "País", "Crescimento Anual (%)", "Crescimento PIB (%)"]].dropna()
+            df_linha_melted = df_linha.melt(
+                id_vars=["Ano", "País"], 
+                value_vars=["Crescimento Anual (%)", "Crescimento PIB (%)"],
+                var_name="Indicador", 
+                value_name="Valor"
+            )
+            fig3 = px.line(
+                df_linha_melted,
+                x="Ano",
+                y="Valor",
+                color="País",               
+                line_dash="Indicador",      
+                markers=True,
+                title=f"Crescimento Populacional vs Econômico - {paises_exibicao if paises_exibicao != 'Todos' else 'Todos os Países'}"
+            )
+            fig3.update_layout(yaxis_title="Crescimento (%)")
+            col3.plotly_chart(fig3)
 
-    if ano != "Todos":
-        df_mapa = df[df["Ano"] == ano]
+            fig4 = px.pie(df_filtred, 
+                        values="População", 
+                        names="País", 
+                        title=f"População por Ano - {paises_exibicao} {ano_min}-{ano_max}", 
+                        color_discrete_sequence=px.colors.sequential.Plasma)
+            col4.plotly_chart(fig4)
 
-        fig_mapa = px.choropleth(
-            df_mapa,
-            locations="ISO3",  # agora com códigos ISO válidos
-            color="População",
-            hover_name="País",
-            title=f"População Total por País em {ano}",
-            color_continuous_scale=px.colors.sequential.Plasma,
-            projection="natural earth"
-        )
+            fig_pib_pc = px.line(df_filtred, x="Ano", y="PIB per capita", color="País", title="Evolução do PIB per capita")
+            col5.plotly_chart(fig_pib_pc)
 
-        fig_mapa.update_geos(showcountries=True, showcoastlines=True, showland=True, fitbounds="locations")
-        fig_mapa.update_layout(
-            autosize=True,
-            margin=dict(l=0, r=0, t=30, b=0)
-        )
+            fig6 = px.line(df_filtred, x="Ano", y="Crescimento Anual (%)", color="País", title="Evolução da Taxa de Crescimento (%)")
+            col6.plotly_chart(fig6)
 
-        st.plotly_chart(fig_mapa, use_container_width=True)
-    else:
-        st.info("Selecione um ano específico para visualizar o mapa.")
+            st.subheader("Relação entre População Total e Crescimento Percentual")
+            fig7 = px.scatter(df_filtred,x="População",y="Crescimento Anual (%)",color="País",size="População",hover_name="Ano",title="Correlação: População x Crescimento (%)")
+            st.plotly_chart(fig7)
+        else:
+            st.warning("Nenhum dado encontrado para os filtros selecionados.")
 
-else:
-    st.warning("Nenhum dado encontrado para os filtros selecionados.")
+    # --- ABA MAPA ---
+    with aba_mapa:
+        st.subheader("Mapa de População Total por País")
+
+        if ano != "Todos":
+            df_mapa = df[(df["Ano"] == ano) & (df["País"].isin(paises_selecionados))]
+
+            fig_mapa = px.choropleth(
+                df_mapa,
+                locations="ISO3",  
+                color="População",
+                hover_name="País",
+                title=f"População Total por País em {ano}",
+                color_continuous_scale=px.colors.sequential.Plasma,
+                projection="natural earth"
+            )
+
+            fig_mapa.update_geos(showcountries=True, showcoastlines=True, showland=True, fitbounds="locations")
+            fig_mapa.update_layout(
+                autosize=True,
+                margin=dict(l=0, r=0, t=30, b=0)
+            )
+
+            st.plotly_chart(fig_mapa, use_container_width=True)
+        else:
+            st.info("Selecione um ano específico para visualizar o mapa.")
+
 
 
