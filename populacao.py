@@ -118,9 +118,6 @@ df = df.dropna(subset=["Crescimento Anual (%)"])  # remove linhas com NaN nessa 
 # Definir variação com base no crescimento
 df["Variação"] = df["Crescimento Anual (%)"].apply(lambda x: "Crescimento" if x > 0 else "Queda")
 
-df["População formatada"] = df["População"].apply(lambda x: f"{x:,}")
-df["PIB formatado"] = df["PIB"].apply(lambda x: f"${x:,.0f}")
-
 # Obter lista de países que tiveram ao menos uma queda populacional
 paises_com_queda = df[df["Variação"] == "Queda"]["País"].unique().tolist()
 
@@ -177,12 +174,13 @@ st.markdown(f"<h1 style='text-align: center;'>Tabela de População Total ({pais
 # Cópia apenas para exibição
 df_exibicao = df_filtred.copy()
 
-# Substituir as colunas originais pelas formatadas
-df_exibicao["População"] = df_exibicao["População formatada"]
-df_exibicao["PIB"] = df_exibicao["PIB formatado"]
+# Formatar colunas no df_exibicao (e não no df original)
+df_exibicao["População"] = df_exibicao["População"].apply(lambda x: f"{x:,}")
+df_exibicao["PIB"] = df_exibicao["PIB"].apply(lambda x: f"${x:,.0f}")
+df_exibicao["PIB per capita"] = df_exibicao["PIB per capita"].apply(lambda x: f"${x:,.0f}")
 
-# Opcional: Remover as colunas auxiliares que não devem aparecer
-df_exibicao = df_exibicao.drop(columns=["População formatada", "PIB formatado"])
+
+
 
 # Converter para HTML
 html = df_exibicao.to_html(index=False, classes='wide-table')
