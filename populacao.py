@@ -169,9 +169,29 @@ if ano != "Todos":
 if variacao_selecionada != "Todos":
     df_filtred = df_filtred[df_filtred["Variação"] == variacao_selecionada]
 
+# Filtragem de dados
+df_filtred = df.copy()
+
+if paises_selecionados:
+    df_filtred = df_filtred[df_filtred["País"].isin(paises_selecionados)]
+
+if ano != "Todos":
+    df_filtred = df_filtred[df_filtred["Ano"] == ano]
+
+if variacao_selecionada != "Todos":
+    df_filtred = df_filtred[df_filtred["Variação"] == variacao_selecionada]
+
+# **Aqui entra o filtro de faixa do crescimento anual**
+df_filtred = df_filtred[
+    (df_filtred["Crescimento Anual (%)"] >= valor_min) &
+    (df_filtred["Crescimento Anual (%)"] <= valor_max)
+]
+
+
 
 ano_min, ano_max = df["Ano"].min(), df["Ano"].max()
 todos_paises = sorted(df["País"].unique())
+    
 if sorted(paises_selecionados) == todos_paises:
     paises_exibicao = "Todos"
 else:
