@@ -254,19 +254,23 @@ if not df_filtred.empty:
      # NOVO fig3: Linha com Crescimento Populacional (%) e PIB (%)
     df_linha = df_filtred[["Ano", "País", "Crescimento Anual (%)", "Crescimento PIB (%)"]].dropna()
 
+    df_linha_melted = df_linha.melt(
+    id_vars=["Ano", "País"], 
+    value_vars=["Crescimento Anual (%)", "Crescimento PIB (%)"],
+    var_name="Indicador", 
+    value_name="Valor"
+)
+
     fig3 = px.line(
-        df_linha.melt(id_vars=["Ano", "País"], 
-                      value_vars=["Crescimento Anual (%)", "Crescimento PIB (%)"],
-                      var_name="Indicador", value_name="Valor"),
+        df_linha_melted,
         x="Ano",
         y="Valor",
-        color="Indicador",
-        line_dash="Indicador",
+        color="País",               # Agora as cores representam os países
+        line_dash="Indicador",      # E os tipos de linha diferenciam os indicadores
         markers=True,
         title=f"Crescimento Populacional vs Econômico - {paises_exibicao if paises_exibicao != 'Todos' else 'Todos os Países'}"
     )
     fig3.update_layout(yaxis_title="Crescimento (%)")
-
     col3.plotly_chart(fig3)
 
     fig4 = px.pie(df_filtred, 
